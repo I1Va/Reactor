@@ -1,6 +1,8 @@
-#include "record_widget.h"
 #include <QVBoxLayout>
 #include <QtMath>
+
+#include "record_widget.h"
+
 
 RecorderWidget::RecorderWidget(QWidget *parent)
     : QWidget(parent), t(0), maxPoints(200)

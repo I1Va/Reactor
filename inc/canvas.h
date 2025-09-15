@@ -9,6 +9,7 @@
 #include <QPixmap>
 #include <QWidget>
 
+
 class Canvas : public QWidget {
     Q_OBJECT
     QPixmap reactorCoreTexture;

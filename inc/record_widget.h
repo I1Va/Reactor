@@ -3,6 +3,7 @@
 
 #include <QWidget>
 #include <QTimer>
+
 #include "qcustomplot.h"
 
 
