@@ -7,13 +7,15 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 
 
-find_package(Qt6 REQUIRED COMPONENTS Widgets)
+find_package(Qt6 REQUIRED COMPONENTS Widgets PrintSupport)
 
 qt_standard_project_setup(REQUIRES 6.8)
 
 qt_add_executable(Reactor
     main.cpp
-    inc/canvas.hpp src/canvas.cpp
+    inc/canvas.h src/canvas.cpp
+    inc/qcustomplot.h src/qcustomplot.cpp
+    inc/record_widget.h src/record_widget.cpp
 )
 
 target_include_directories(Reactor
@@ -21,7 +23,8 @@ target_include_directories(Reactor
 )
 
 target_link_libraries(Reactor PRIVATE
-    Qt::Core
-    Qt::Widgets
+    Qt6::Core
+    Qt6::Widgets
+    Qt6::PrintSupport
 ) 
 

@@ -1,4 +1,4 @@
-// #include "canvas.hpp"
+// #include "canvas.h"
 // #include <QPainter>
 // #include <QTimer>
 

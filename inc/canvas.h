@@ -9,27 +9,42 @@
 #include <QPixmap>
 #include <QWidget>
 
-
 class Canvas : public QWidget {
     Q_OBJECT
-    QPixmap m_tex;
+    QPixmap reactorCoreTexture;
+    QPixmap reactorPistonTexture;
+    QSize pistonSize {100, 100};
+    QSize coreSize {300, 100};
 
 public:
-    explicit Canvas(const QString &texPath, QWidget *parent = nullptr)
-        : QWidget(parent), m_tex(texPath) {
-        setMinimumSize(300, 200);
+    explicit Canvas(const QString &coreTexturePath, const QString &pistonTexturePath, QWidget *parent = nullptr)
+        : QWidget(parent), reactorCoreTexture(coreTexturePath), reactorPistonTexture(pistonTexturePath) 
+        {
+            setMinimumSize(300, 200);
+            // инвариант reactorCore, reactorPiston != NULL
+        }
+
+public: 
+    void setPistonSize(const QSize &size) {
+        pistonSize = size;
+        update(); // triggers repaint
     }
+    void setCoreSize(const QSize &size) {
+        coreSize = size;
+        update();
+    }
+
 protected:
     void paintEvent(QPaintEvent *) override {
         QPainter p(this);
         p.setRenderHint(QPainter::Antialiasing);
 
         // draw white background for the canvas area
-        if (!m_tex.isNull())
-            p.drawPixmap(rect(), m_tex);  // stretch
-        else
-            p.fillRect(rect(), Qt::white);
+        QRect pistonPos(QPoint(0,0), pistonSize);
+        QRect corePos(QPoint(pistonSize.width(), 0), pistonSize);
 
+        p.drawPixmap(pistonPos, reactorPistonTexture);
+        p.drawPixmap(corePos, reactorCoreTexture);
     }
 };
 
