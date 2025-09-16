@@ -14,29 +14,6 @@
 
 #include "reactorcore.h"
 
-class ReactorCore : public QObject {
-    Q_OBJECT
-
-    const int reactorCoreUpdateMS = 16;
-
-    std::list<Molecule> moleculeList;
-    int circlitCnt;
-    int quadritCnt;
-
-public:
-    explicit ReactorCore(QObject *parent = nullptr) : QObject(parent) {
-        auto *timer = new QTimer(this);
-        connect(timer, &QTimer::timeout, this, &ReactorCore::reactorCoreUpdate);
-        timer->start(reactorCoreUpdateMS);
-    }
-
-private slots:
-    void reactorCoreUpdate();
-public slots:
-    void addCirclit();
-    void addQuadrit();
-};
-
 class ReactorCanvas : public QWidget {
     Q_OBJECT
     QPixmap reactorCoreTexture;

@@ -42,16 +42,3 @@ void ReactorCanvas::setPistonPercentage(const double value) {
     emit pistonPercentageChanged(value);
     update();
 }
-
-
-void ReactorCore::reactorCoreUpdate() {
-    std::cout << "reactorCoreUpdate\n";
-}
-
-void ReactorCore::addCirclit() {
-    std::cout << "addCirclit\n";
-}
-
-void ReactorCore::addQuadrit() {
-    std::cout << "addQuadrit\n";
-}

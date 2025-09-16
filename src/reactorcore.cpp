@@ -14,7 +14,7 @@ void Molecule::collide(const Molecule &other, std::list<Molecule> &reactionResul
     } else {
         gm_vector<double, 2> boomCenter = position + (other.position - position) * 0.5;
         int boomMoleculesCount = mass + other.mass;
-        double newRadius = Circlit::MIN_RADIUS * std::sin(std::numbers::pi / boomMoleculesCount);
+        double newRadius = CIRCLIT_MIN_RADIUS * std::sin(std::numbers::pi / boomMoleculesCount);
         double boomRootationAngle = 2 * std::numbers::pi / boomMoleculesCount;
         gm_vector<double, 2> boomCurMoveVector = gm_vector<double, 2>(0, -1);
     
@@ -22,4 +22,29 @@ void Molecule::collide(const Molecule &other, std::list<Molecule> &reactionResul
             reactionResult.push_back(Circlit(collideCenter + boomCurMoveVector, boomCurMoveVector, 1));
         }
     }
+}
+
+void ReactorCore::reactorCoreUpdate() {
+    std::cout << "reactorCoreUpdate\n";
+}
+
+void ReactorCore::addMolecule(const bool CirclitState) {
+    gm_vector<double, 2> moleculePosition(randRange(0, CordSysWidth), randRange(0, CordSysHeight));
+
+    double randomAngle = randRange(0, 2 * std::numbers::pi);
+    gm_vector<double, 2> moleculetMoveVector = INITIAL_MOVEVECTOR.rotate(randomAngle);
+
+    if (CirclitState) {
+        moleculeList.push_back(Circlit(moleculePosition, moleculetMoveVector, INITIAL_MASS));
+    }  else {
+        moleculeList.push_back(Quadrit(moleculePosition, moleculetMoveVector, INITIAL_MASS));
+    }
+}
+
+void ReactorCore::addCirclit() {
+    addMolecule(/*CirclitState=*/true);
+}
+
+void ReactorCore::addQuadrit() {
+     addMolecule(/*CirclitState=*/false);
 }
