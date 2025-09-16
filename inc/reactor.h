@@ -19,10 +19,12 @@ class ReactorCanvas : public QWidget {
     QPixmap reactorCoreTexture;
     QPixmap reactorPistonTexture;
 
-    double pistonPercentage = 0;
+    ReactorCore *reactorCore;
+
+    double pistonPercentage;
 public:
-    explicit ReactorCanvas(const QString &pistonTexturePath, const QString &coreTexturePath, QWidget *parent = nullptr)
-        : QWidget(parent), reactorCoreTexture(coreTexturePath), reactorPistonTexture(pistonTexturePath) {}
+    explicit ReactorCanvas(const QString &pistonTexturePath, const QString &coreTexturePath, ReactorCore *reactorCore, QWidget *parent = nullptr)
+        : QWidget(parent), reactorCoreTexture(coreTexturePath), reactorPistonTexture(pistonTexturePath), reactorCore(reactorCore) { assert(reactorCore); }
 
 public: 
     double getPistonPercentage() const { return pistonPercentage; }
@@ -43,6 +45,27 @@ protected:
 
         p.drawPixmap(pistonPos, reactorPistonTexture);
         p.drawPixmap(corePos, reactorCoreTexture);
+
+        // for (Molecule molecule : reactorCore->getMoleculeList()) {
+        //     ShapeType shapeType = molecule.getShapeType();
+        //     double moleculeSize = molecule.getSize();
+        //     gm_vector<unsigned char, 3> moleculeColor = molecule.getColor();
+        //     gm_vector<int, 2> moleculeCanvasPos = reactorCore->convertMoleculeCords(molecule.getPosition());
+    
+        //     switch (shapeType) {
+        //         case ShapeType::SQUARE:
+        //             p.drawRect(50, 50, 100, 100);
+        //             break;
+                
+        //         default:
+        //             break;
+        //         }
+        // }
+
+
+
+
+        
     }
 };
 
@@ -116,8 +139,9 @@ public:
         auto *reactorLayout = new QVBoxLayout(this);
         reactorLayout->setContentsMargins(borderSize, borderSize, borderSize, borderSize);
 
-        reactorCanvas = new ReactorCanvas(pistonTexturePath, coreTexturePath, this);
         reactorCore = new ReactorCore(reactorCanvas);
+        reactorCanvas = new ReactorCanvas(pistonTexturePath, coreTexturePath, reactorCore, this);
+        
 
         reactorLayout->addWidget(reactorCanvas, reactorCanvasStretchFactor);
         addPistonSlider(reactorLayout, pistonSliderStretchFactor);
@@ -126,6 +150,8 @@ public:
 
 protected:
     void paintEvent(QPaintEvent *event) override {
+        assert(event);
+    
         QPainter reactorPainter(this);
         if (!shellTexture.isNull()) {
             reactorPainter.drawPixmap(rect(), shellTexture);

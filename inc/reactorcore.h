@@ -26,6 +26,10 @@ static const double CIRCLIT_MIN_RADIUS = 1;
 // static const double INITIAL_CIRCLIT_RADIUS = 1;
 // static const double INITIAL_QUADRIT_LENGTH = 1;
 
+enum ShapeType {
+    SQUARE,
+    CIRCLE
+};
 
 class Molecule {
     gm_vector<double, 2> position;
@@ -36,6 +40,14 @@ class Molecule {
 
     friend class Circlit;
     friend class Quadrit;
+
+public: 
+    virtual ShapeType getShapeType() const;
+    virtual double getSize() const;
+
+    gm_vector<unsigned char, 3> getColor() const;
+    gm_vector<double, 2> getPosition() const;
+
 private:
     Molecule
     (
@@ -66,6 +78,10 @@ public:
     ): 
         Molecule(position, moveVector, mass, color) { radius = getRadius(); }
 
+    ShapeType getShapeType() const { return ShapeType::CIRCLE; }
+    double getSize() const { return radius; }
+    gm_vector<unsigned char, 3> getColor() const { return color; }
+
 private:
     double getRadius() const { return mass; }; // temp formula: radius = mass
 };
@@ -81,6 +97,11 @@ public:
         gm_vector<unsigned char, 3> color=QUADRIT_COLOR
     ): 
         Molecule(position, moveVector, mass, color) { length = getLength(); }
+    
+    ShapeType getShapeType() const { return ShapeType::SQUARE; }
+    double getSize() const { return length; }
+    gm_vector<unsigned char, 3> getColor() const { return color; }
+
 private:
     double getLength() const { return mass; }; // temp formula: length = mass
 };
@@ -94,7 +115,7 @@ class ReactorCore : public QObject {
     gm_vector<double, 2> coreCanvasSize;
     double               coreCordSystemScale;
 
-    double CordSysWidth;
+    double CordSysWidth; // нужно пересчитывать!!!!!
     double CordSysHeight;
 
     std::list<Molecule> moleculeList;
@@ -112,8 +133,15 @@ public:
         timer->start(REACTOR_CORE_UPDATE_MS);
     }
 
+    const std::list<Molecule> &getMoleculeList() const { return moleculeList; }
+
+    gm_vector<int, 2> convertMoleculeCords(const gm_vector<double, 2> &moleculeCords) {
+        return moleculeCords * coreCordSystemScale + coreCanvasPos;
+    }
+
 private:
     void addMolecule(const bool CirclitState);
+
 
 private slots:
     void reactorCoreUpdate();
