@@ -1,4 +1,4 @@
-// #include "canvas.h"
+#include "canvas.h"
 // #include <QPainter>
 // #include <QTimer>
 
@@ -34,3 +34,11 @@
 //         p.restore();
 //     }
 // }
+
+void ReactorCanvas::setPistonPercentage(const double value) {
+    if (value == pistonPercentage)
+        return;
+    pistonPercentage = value;
+    emit pistonPercentageChanged(value);
+    update();
+}

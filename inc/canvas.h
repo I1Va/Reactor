@@ -8,41 +8,35 @@
 #include <QPainter>
 #include <QPixmap>
 #include <QWidget>
+#include <QSlider>
 
 
-class Canvas : public QWidget {
+class ReactorCanvas : public QWidget {
     Q_OBJECT
     QPixmap reactorCoreTexture;
     QPixmap reactorPistonTexture;
-    QSize pistonSize {100, 100};
-    QSize coreSize {300, 100};
 
+    double pistonPercentage = 0;
 public:
-    explicit Canvas(const QString &coreTexturePath, const QString &pistonTexturePath, QWidget *parent = nullptr)
-        : QWidget(parent), reactorCoreTexture(coreTexturePath), reactorPistonTexture(pistonTexturePath) 
-        {
-            setMinimumSize(300, 200);
-            // инвариант reactorCore, reactorPiston != NULL
-        }
+    explicit ReactorCanvas(const QString &pistonTexturePath, const QString &coreTexturePath, QWidget *parent = nullptr)
+        : QWidget(parent), reactorCoreTexture(coreTexturePath), reactorPistonTexture(pistonTexturePath) {}
 
 public: 
-    void setPistonSize(const QSize &size) {
-        pistonSize = size;
-        update(); // triggers repaint
-    }
-    void setCoreSize(const QSize &size) {
-        coreSize = size;
-        update();
-    }
+    double getPistonPercentage() const { return pistonPercentage; }
+    void setPistonPercentage(const double value);
+
+signals:
+    void pistonPercentageChanged(double value);
 
 protected:
     void paintEvent(QPaintEvent *) override {
         QPainter p(this);
         p.setRenderHint(QPainter::Antialiasing);
 
-        // draw white background for the canvas area
-        QRect pistonPos(QPoint(0,0), pistonSize);
-        QRect corePos(QPoint(pistonSize.width(), 0), pistonSize);
+        double pistonWidth = geometry().width() * pistonPercentage / 100.0;
+        double coreWidth = geometry().width() - pistonWidth;
+        QRect pistonPos(QPoint(0,0), QSize(pistonWidth, geometry().height()));
+        QRect corePos(QPoint(pistonWidth, 0), QSize(coreWidth, geometry().height()));
 
         p.drawPixmap(pistonPos, reactorPistonTexture);
         p.drawPixmap(corePos, reactorCoreTexture);
@@ -50,35 +44,75 @@ protected:
 };
 
 
-class TexturedFrame : public QFrame {
+class Reactor : public QFrame {
     Q_OBJECT
 
-    QPixmap m_tex;
-    int m_border;
+    static const int pistonSliderMinVal = 10;
+    static const int pistonSliderMaxVal = 80;
+    static const int pistonSliderStretchFactor = 1;
+    static const int reactorCanvasStretchFactor = 4;
+
+    QPixmap shellTexture;
+    int borderSize;
+
+    QSlider *pistonSlider; 
+
+    ReactorCanvas *canvas;
+
+    
+    
 public:
-    // texPath: "texture.png" (filesystem) or ":/images/texture.png" (resource)
-    explicit TexturedFrame(const QString &texPath, int border = 12, QWidget *parent = nullptr)
-        : QFrame(parent), m_tex(texPath), m_border(border)
-    {
-        // layout owned by this frame and margins reserve the textured border
-        auto *lyt = new QVBoxLayout(this);
-        lyt->setContentsMargins(m_border, m_border, m_border, m_border);
-        lyt->setSpacing(0);
+    void addPistonSliderWidget(QVBoxLayout *reactorLayout, const int stretchFactor) {
+        assert(reactorLayout);
+
+        pistonSlider = new QSlider(Qt::Horizontal);
+
+        canvas->setPistonPercentage(pistonSliderMinVal);
+        pistonSlider->setRange(pistonSliderMinVal, pistonSliderMaxVal);      
+        pistonSlider->setValue(canvas->getPistonPercentage());
+
+        connect(canvas, &ReactorCanvas::pistonPercentageChanged,
+                pistonSlider, &QSlider::setValue);
+    
+        connect(pistonSlider, &QSlider::valueChanged,
+                canvas, &ReactorCanvas::setPistonPercentage);
+        
+
+        reactorLayout->addWidget(pistonSlider, stretchFactor);
+    }
+
+
+    explicit Reactor
+    (
+        
+        const QString &shellTexturePath, int borderSize,
+        const QString &pistonTexturePath,
+        const QString &coreTexturePath,
+        QWidget *parent = nullptr
+    )
+        : QFrame(parent), 
+        shellTexture(shellTexturePath), borderSize(borderSize)
+    {        
+        auto *reactorLayout = new QVBoxLayout(this);
+        reactorLayout->setContentsMargins(borderSize, borderSize, borderSize, borderSize);
+
+        canvas = new ReactorCanvas(pistonTexturePath, coreTexturePath, this);
+
+        reactorLayout->addWidget(canvas, reactorCanvasStretchFactor);
+        addPistonSliderWidget(reactorLayout, pistonSliderStretchFactor);
     }
 
 protected:
-    void paintEvent(QPaintEvent *ev) override {
-        QPainter p(this);
-        if (!m_tex.isNull()) {
-            // tile the texture across the whole frame
-            p.drawPixmap(rect(), m_tex);
+    void paintEvent(QPaintEvent *event) override {
+        QPainter reactorPainter(this);
+        if (!shellTexture.isNull()) {
+            reactorPainter.drawPixmap(rect(), shellTexture);
         } else {
-            qWarning("Texture image not loaded!");
-            // fallback background  
-            p.fillRect(rect(), palette().window());
+            qWarning("ReactorShell Texture image not loaded!");
+            reactorPainter.fillRect(rect(), palette().window());
         }
-        // draw the QFrame decoration (borders) if you want them
-        QFrame::paintEvent(ev);
+
+        QFrame::paintEvent(event);
     }
 };
 
