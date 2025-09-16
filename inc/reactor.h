@@ -9,7 +9,33 @@
 #include <QPixmap>
 #include <QWidget>
 #include <QSlider>
+#include <QTimer>
+#include <QPushButton>
 
+#include "reactorcore.h"
+
+class ReactorCore : public QObject {
+    Q_OBJECT
+
+    const int reactorCoreUpdateMS = 16;
+
+    std::list<Molecule> moleculeList;
+    int circlitCnt;
+    int quadritCnt;
+
+public:
+    explicit ReactorCore(QObject *parent = nullptr) : QObject(parent) {
+        auto *timer = new QTimer(this);
+        connect(timer, &QTimer::timeout, this, &ReactorCore::reactorCoreUpdate);
+        timer->start(reactorCoreUpdateMS);
+    }
+
+private slots:
+    void reactorCoreUpdate();
+public slots:
+    void addCirclit();
+    void addQuadrit();
+};
 
 class ReactorCanvas : public QWidget {
     Q_OBJECT
@@ -43,7 +69,6 @@ protected:
     }
 };
 
-
 class Reactor : public QFrame {
     Q_OBJECT
 
@@ -51,36 +76,54 @@ class Reactor : public QFrame {
     static const int pistonSliderMaxVal = 80;
     static const int pistonSliderStretchFactor = 1;
     static const int reactorCanvasStretchFactor = 4;
+    static const int moleculeButtonStretchFactor = 1;
 
     QPixmap shellTexture;
     int borderSize;
 
-    QSlider *pistonSlider; 
+    QSlider *pistonSlider;
 
-    ReactorCanvas *canvas;
+    QPushButton *addCirclitButton;
+    QPushButton *addQuadritButton;
+
+    ReactorCanvas *reactorCanvas;
+    ReactorCore   *reactorCore;
+
 
     
     
 public:
-    void addPistonSliderWidget(QVBoxLayout *reactorLayout, const int stretchFactor) {
+    void addPistonSlider(QVBoxLayout *reactorLayout, const int sliderStretchFactor) {
         assert(reactorLayout);
 
         pistonSlider = new QSlider(Qt::Horizontal);
 
-        canvas->setPistonPercentage(pistonSliderMinVal);
+        reactorCanvas->setPistonPercentage(pistonSliderMinVal);
         pistonSlider->setRange(pistonSliderMinVal, pistonSliderMaxVal);      
-        pistonSlider->setValue(canvas->getPistonPercentage());
+        pistonSlider->setValue(reactorCanvas->getPistonPercentage());
 
-        connect(canvas, &ReactorCanvas::pistonPercentageChanged,
+        connect(reactorCanvas, &ReactorCanvas::pistonPercentageChanged,
                 pistonSlider, &QSlider::setValue);
     
         connect(pistonSlider, &QSlider::valueChanged,
-                canvas, &ReactorCanvas::setPistonPercentage);
+                reactorCanvas, &ReactorCanvas::setPistonPercentage);
         
-
-        reactorLayout->addWidget(pistonSlider, stretchFactor);
+        reactorLayout->addWidget(pistonSlider, sliderStretchFactor);
     }
 
+    void addReactorCoreButtons(QVBoxLayout *reactorLayout, ReactorCore *reactorCore, const int buttonStretchFactor) {
+        assert(reactorLayout);
+        assert(reactorCore);
+
+        addCirclitButton = new QPushButton("add Circlit", this);
+        addQuadritButton = new QPushButton("add Quadrit", this);
+
+        reactorLayout->addWidget(addCirclitButton, buttonStretchFactor);
+        reactorLayout->addWidget(addQuadritButton, buttonStretchFactor);
+
+        connect(addCirclitButton, &QPushButton::clicked, reactorCore, &ReactorCore::addCirclit);
+        connect(addQuadritButton,  &QPushButton::clicked, reactorCore, &ReactorCore::addQuadrit);
+    }
 
     explicit Reactor
     (
@@ -96,10 +139,12 @@ public:
         auto *reactorLayout = new QVBoxLayout(this);
         reactorLayout->setContentsMargins(borderSize, borderSize, borderSize, borderSize);
 
-        canvas = new ReactorCanvas(pistonTexturePath, coreTexturePath, this);
+        reactorCanvas = new ReactorCanvas(pistonTexturePath, coreTexturePath, this);
+        reactorCore = new ReactorCore(reactorCanvas);
 
-        reactorLayout->addWidget(canvas, reactorCanvasStretchFactor);
-        addPistonSliderWidget(reactorLayout, pistonSliderStretchFactor);
+        reactorLayout->addWidget(reactorCanvas, reactorCanvasStretchFactor);
+        addPistonSlider(reactorLayout, pistonSliderStretchFactor);
+        addReactorCoreButtons(reactorLayout, reactorCore, moleculeButtonStretchFactor);
     }
 
 protected:

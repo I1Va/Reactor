@@ -13,7 +13,7 @@ qt_standard_project_setup(REQUIRES 6.8)
 
 qt_add_executable(Reactor
     main.cpp
-    inc/canvas.h src/canvas.cpp
+    inc/reactor.h src/reactor.cpp
     #inc/qcustomplot.h src/qcustomplot.cpp
     inc/record_widget.h src/record_widget.cpp
     inc/reactorcore.h src/reactorcore.cpp

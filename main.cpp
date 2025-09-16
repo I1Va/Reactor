@@ -1,7 +1,6 @@
-#include "canvas.h"
+#include "reactor.h"
 #include "record_widget.h"
 
-#include <QPushButton>
 
 #include <QObject>
 
@@ -72,14 +71,6 @@ int main(int argc, char** argv){
     // mainLayout->addWidget(system_energy_recorder, /*stretch=*/1);  // narrower
 
     
-
-    QPushButton *btn1 = new QPushButton("Add circle molecule");
-    QPushButton *btn2 = new QPushButton("Add square molecule");
-
-    mainLayout->addWidget(btn1);
-    mainLayout->addWidget(btn2);
-    
-
     
     window.resize(800, 800);
     window.show();
