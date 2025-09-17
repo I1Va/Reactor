@@ -14,18 +14,49 @@
 
 #include "reactorcore.h"
 
+static const int pistonSliderMinVal = 10;
+static const int pistonSliderMaxVal = 80;
+static const int pistonSliderStretchFactor = 1;
+static const int reactorCanvasStretchFactor = 4;
+static const int moleculeButtonStretchFactor = 1;
+static const double coreCordSystemScale = 10;
+
+
 class ReactorCanvas : public QWidget {
     Q_OBJECT
     QPixmap reactorCoreTexture;
     QPixmap reactorPistonTexture;
 
-    double pistonPercentage = 0;
+    double pistonPercentage;
+
+    QRect pistonRectangle;
+    QRect coreRectangle;
+
+    ReactorCore *reactorCore;
+
 public:
-    explicit ReactorCanvas(const QString &pistonTexturePath, const QString &coreTexturePath, QWidget *parent = nullptr)
-        : QWidget(parent), reactorCoreTexture(coreTexturePath), reactorPistonTexture(pistonTexturePath) {}
+    explicit ReactorCanvas
+    (
+        const QString &pistonTexturePath, 
+        const QString &coreTexturePath, 
+        QWidget *parent = nullptr
+    ) : 
+        QWidget(parent), 
+        reactorCoreTexture(coreTexturePath), 
+        reactorPistonTexture(pistonTexturePath)
+    {
+        reactorCore = new ReactorCore(coreRectangle, coreCordSystemScale, this);
+        setPistonPercentage(pistonSliderMinVal);
+    }
+
+    ~ReactorCanvas() {
+        delete reactorCore;
+    }
 
 public: 
     double getPistonPercentage() const { return pistonPercentage; }
+    ReactorCore *getReactorCore() const { return reactorCore; }
+
     void setPistonPercentage(const double value);
 
 signals:
@@ -33,27 +64,51 @@ signals:
 
 protected:
     void paintEvent(QPaintEvent *) override {
-        QPainter p(this);
-        p.setRenderHint(QPainter::Antialiasing);
+        QPainter painter(this);
+        painter.setRenderHint(QPainter::Antialiasing);
 
-        double pistonWidth = geometry().width() * pistonPercentage / 100.0;
-        double coreWidth = geometry().width() - pistonWidth;
-        QRect pistonPos(QPoint(0,0), QSize(pistonWidth, geometry().height()));
-        QRect corePos(QPoint(pistonWidth, 0), QSize(coreWidth, geometry().height()));
+        painter.drawPixmap(pistonRectangle, reactorPistonTexture);
+        painter.drawPixmap(coreRectangle, reactorCoreTexture);
 
-        p.drawPixmap(pistonPos, reactorPistonTexture);
-        p.drawPixmap(corePos, reactorCoreTexture);
+
+        for (auto iterator = reactorCore->getMoleculeList().begin(); iterator != reactorCore->getMoleculeList().end(); ++iterator) {
+            Molecule *molecule = iterator->get();
+
+            ShapeType shapeType = molecule->getShapeType();
+            double moleculeSize = molecule->getSize() * coreCordSystemScale;
+            QColor moleculeColor = QColor(molecule->getColor().get_x(), molecule->getColor().get_y(), molecule->getColor().get_z());
+            gm_vector<int, 2> moleculeCanvasPos = reactorCore->convertMoleculeCords(molecule->getPosition());
+            
+            painter.setBrush(moleculeColor);
+            painter.setPen(Qt::NoPen); 
+
+            switch (shapeType) {
+                case ShapeType::SQUARE:
+                    std::cout << "draw SQUARE: " << moleculeCanvasPos.get_x() << " " << moleculeCanvasPos.get_y() << "\n";
+
+                    painter.drawRect
+                    (
+                        moleculeCanvasPos.get_x() - moleculeSize / 2, 
+                        moleculeCanvasPos.get_y() - moleculeSize / 2,
+                        moleculeSize,
+                        moleculeSize
+                    );
+        
+                    break;
+                case ShapeType::CIRCLE:
+                    painter.drawEllipse(QPointF(moleculeCanvasPos.get_x(), moleculeCanvasPos.get_y()), moleculeSize, moleculeSize);
+                    break;
+
+                default:
+                    qWarning() << QString("Can't paint molecule shape`%1`").arg(shapeType);
+                    break;
+            }
+        }
     }
 };
 
 class Reactor : public QFrame {
     Q_OBJECT
-
-    static const int pistonSliderMinVal = 10;
-    static const int pistonSliderMaxVal = 80;
-    static const int pistonSliderStretchFactor = 1;
-    static const int reactorCanvasStretchFactor = 4;
-    static const int moleculeButtonStretchFactor = 1;
 
     QPixmap shellTexture;
     int borderSize;
@@ -64,9 +119,6 @@ class Reactor : public QFrame {
     QPushButton *addQuadritButton;
 
     ReactorCanvas *reactorCanvas;
-    ReactorCore   *reactorCore;
-
-
     
     
 public:
@@ -117,11 +169,11 @@ public:
         reactorLayout->setContentsMargins(borderSize, borderSize, borderSize, borderSize);
 
         reactorCanvas = new ReactorCanvas(pistonTexturePath, coreTexturePath, this);
-        reactorCore = new ReactorCore(reactorCanvas);
+        
 
         reactorLayout->addWidget(reactorCanvas, reactorCanvasStretchFactor);
         addPistonSlider(reactorLayout, pistonSliderStretchFactor);
-        addReactorCoreButtons(reactorLayout, reactorCore, moleculeButtonStretchFactor);
+        addReactorCoreButtons(reactorLayout, reactorCanvas->getReactorCore(), moleculeButtonStretchFactor);
     }
 
 protected:

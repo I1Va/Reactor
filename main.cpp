@@ -27,10 +27,6 @@
 //     layout->addWidget(slider);
 //     setCentralWidget(central);
 // }
-
-const static double pistonSliderMinVal = 10.0;
-const static double pistonSliderMaxVal = 80.0;
-
 const QString reactorShellTexturePath("images/reactor_borders.jpeg");
 const QString reactorPistonTexturePath("images/piston.jpeg");
 const QString reactorCoreTexturePath("images/reactor_inside.jpeg");
