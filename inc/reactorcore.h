@@ -32,7 +32,6 @@ enum ShapeType {
     NONE_SHAPE_TYPE
 };
 
-
 class Molecule {
     gm_vector<double, 2> position;
     gm_vector<double, 2> moveVector;
@@ -42,6 +41,14 @@ class Molecule {
 
     friend class Circlit;
     friend class Quadrit;
+
+public: 
+    virtual ShapeType getShapeType() const;
+    virtual double getSize() const;
+
+    gm_vector<unsigned char, 3> getColor() const;
+    gm_vector<double, 2> getPosition() const;
+
 private:
     Molecule
     (
@@ -78,7 +85,7 @@ public:
         gm_vector<unsigned char, 3> color=CIRCLIT_COLOR
     ): 
         Molecule(position, moveVector, mass, color) { radius = getRadius(); }
-
+ 
     ShapeType getShapeType() const override { return ShapeType::CIRCLE; }
     double getSize() const override { return radius; }
 
@@ -125,6 +132,7 @@ class ReactorCore : public QObject {
     double cordSysWidth;
     double cordSysHeight;
 
+
     std::list<std::unique_ptr<Molecule>> moleculeList;
     int circlitCnt;
     int quadritCnt;
@@ -164,11 +172,18 @@ public:
         cordSysHeight = coreCanvasSize.get_y() / coreCordSystemScale;
     }
 
+    const std::list<Molecule> &getMoleculeList() const { return moleculeList; }
+
+    gm_vector<int, 2> convertMoleculeCords(const gm_vector<double, 2> &moleculeCords) {
+        return moleculeCords * coreCordSystemScale + coreCanvasPos;
+    }
+
 private:
 
 
 
     void addMolecule(const bool CirclitState);
+
 
 private slots:
     void reactorCoreUpdate();

@@ -169,7 +169,6 @@ public:
         reactorLayout->setContentsMargins(borderSize, borderSize, borderSize, borderSize);
 
         reactorCanvas = new ReactorCanvas(pistonTexturePath, coreTexturePath, this);
-        
 
         reactorLayout->addWidget(reactorCanvas, reactorCanvasStretchFactor);
         addPistonSlider(reactorLayout, pistonSliderStretchFactor);
@@ -178,6 +177,8 @@ public:
 
 protected:
     void paintEvent(QPaintEvent *event) override {
+        assert(event);
+    
         QPainter reactorPainter(this);
         if (!shellTexture.isNull()) {
             reactorPainter.drawPixmap(rect(), shellTexture);
