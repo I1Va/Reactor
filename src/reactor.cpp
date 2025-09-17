@@ -35,7 +35,7 @@
 //     }
 // }
 
-void ReactorCanvas::setPistonPercentage(const double value) {
+void Reactor::setPistonPercentage(const int value) {
     assert(reactorCore);
     
     if (value == pistonPercentage)
@@ -43,15 +43,10 @@ void ReactorCanvas::setPistonPercentage(const double value) {
     pistonPercentage = value;
 
 
-    double pistonWidth = geometry().width() * pistonPercentage / 100.0;
-    double coreWidth = geometry().width() - pistonWidth;
+    updateInternalRectanglesInfo();
 
-    pistonRectangle = QRect(QPoint(0,0), QSize(pistonWidth, geometry().height()));
-    coreRectangle = QRect(QPoint(pistonWidth, 0), QSize(coreWidth, geometry().height()));
-
-    reactorCore->updateCoreRectangle(coreRectangle);
-
+    reactorCanvas->setInternalRectangles(pistonRectangle, coreRectangle);
+    reactorCore->setCoreRectangle(coreRectangle);
 
     emit pistonPercentageChanged(value);
-    update();
 }

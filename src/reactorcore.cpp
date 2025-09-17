@@ -27,13 +27,13 @@ void ReactorCore::reactorCoreUpdate() {
     std::cout << "reactorCoreUpdate\n";
 }
 
-void ReactorCore::addMolecule(const bool CirclitState) {
+void ReactorCore::addMolecule(const bool circlitState) {
     gm_vector<double, 2> moleculePosition(randRange(0, cordSysWidth), randRange(0, cordSysHeight));
 
     double randomAngle = randRange(0, 2 * std::numbers::pi);
     gm_vector<double, 2> moleculetMoveVector = INITIAL_MOVEVECTOR.rotate(randomAngle);
 
-    if (CirclitState) {
+    if (circlitState) {
         moleculeList.push_back(std::make_unique<Circlit>(moleculePosition, moleculetMoveVector, INITIAL_MASS));
     }  else {
         moleculeList.push_back(std::make_unique<Quadrit>(moleculePosition, moleculetMoveVector, INITIAL_MASS));

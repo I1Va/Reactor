@@ -130,13 +130,9 @@ class ReactorCore : public QObject {
     int quadritCnt;
 
 public:
-    double randRange(double start, double end) {
-        return start + (end - start) * randomGenerator() / double(randomGenerator.max());
-    }
-
     explicit ReactorCore
     (
-        const QRect coreRectangle, const double coreCordSystemScale,
+        const QRect &coreRectangle, const double coreCordSystemScale,
         QObject *parent = nullptr
     ) :
         QObject(parent), randomGenerator(std::random_device{}()),
@@ -146,16 +142,21 @@ public:
         connect(timer, &QTimer::timeout, this, &ReactorCore::reactorCoreUpdate);
         timer->start(REACTOR_CORE_UPDATE_MS);
 
-        updateCoreRectangle(coreRectangle);
+        setCoreRectangle(coreRectangle);
     }
+
+    double randRange(double start, double end) {
+        return start + (end - start) * randomGenerator() / double(randomGenerator.max());
+    }
+
 
     const std::list<std::unique_ptr<Molecule>> &getMoleculeList() const { return moleculeList; }
 
-    gm_vector<int, 2> convertMoleculeCords(const gm_vector<double, 2> &moleculeCords) {
+    gm_vector<int, 2> convertMoleculeCords(const gm_vector<double, 2> &moleculeCords) const {
         return moleculeCords * coreCordSystemScale + coreCanvasPos;
     }
 
-    void updateCoreRectangle(const QRect &coreRectangle) {
+    void setCoreRectangle(const QRect &coreRectangle) {
         coreCanvasPos = gm_vector<double, 2>(coreRectangle.topLeft().x(), coreRectangle.topLeft().y());
         coreCanvasSize = gm_vector<double, 2>(coreRectangle.width(), coreRectangle.height());
 
@@ -165,13 +166,11 @@ public:
     }
 
 private:
-
-
-
     void addMolecule(const bool CirclitState);
 
 private slots:
     void reactorCoreUpdate();
+
 public slots:
     void addCirclit();
     void addQuadrit();
