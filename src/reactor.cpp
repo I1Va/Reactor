@@ -35,9 +35,19 @@
 //     }
 // }
 
+void Reactor::addCirclitHandle() {
+    reactorCore->addCirclit();
+    update();
+}
+
+void Reactor::addQuadritHandle() {
+    reactorCore->addQuadrit();
+    update();
+}
+
 void Reactor::setPistonPercentage(const int value) {
     assert(reactorCore);
-    
+     
     if (value == pistonPercentage)
         return;
     pistonPercentage = value;
