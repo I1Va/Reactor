@@ -35,6 +35,10 @@
 //     }
 // }
 
+void Reactor::reactorUpdate() {
+    update();
+}
+
 void Reactor::addCirclitHandle() {
     reactorCore->addCirclit();
     update();

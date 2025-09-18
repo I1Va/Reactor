@@ -29,6 +29,32 @@
 //     }
 // }
 
+void ReactorCore::reactorCoreUpdate(const double deltaSecs) {
+    emit reactorCoreUpdated();
+
+    updateClosestKeyEventInfo();
+    double closestEventDelta = closestEventTimePoint - currentReactorCoreTime;
+    
+    std::cout << "closestEventDelta : " << closestEventDelta << "\n";
+
+    if (std::isnan(closestEventDelta) || deltaSecs < closestEventDelta) {
+        stableProcessContinue(deltaSecs);
+        return;
+    }
+
+    if ((std::fabs(deltaSecs - closestEventDelta)) < std::numeric_limits<double>::epsilon()) {
+        reactorCoreUpdate(currentReactorCoreTime - closestEventTimePoint);
+        return;
+    }
+
+    // deltaSecs > closestEventDelta
+    stableProcessContinue(closestEventDelta); // waiting for closest event
+    processReactorCoreEvent();
+
+    reactorCoreUpdate(deltaSecs - closestEventDelta);
+    
+}
+
 void ReactorCore::reactorCoreUpdateHandle() {
     reactorCoreUpdate(REACTOR_CORE_UPDATE_SECS);
 }

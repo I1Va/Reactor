@@ -82,6 +82,7 @@ protected:
             painter.setBrush(moleculeColor);
             painter.setPen(Qt::NoPen); 
             
+            std::cout << "pos : " << moleculeCanvasPos << "\n";
             switch (shapeType) {
                 case ShapeType::SQUARE:
 
@@ -175,8 +176,11 @@ public:
         reactorLayout->setContentsMargins(borderSize, borderSize, borderSize, borderSize);
 
         reactorCore = new ReactorCore(coreRectangle, CORE_CORD_SYSTEM_SCALE, this);
+        connect(reactorCore, &ReactorCore::reactorCoreUpdated, this, &Reactor::reactorUpdate);
+
         reactorCanvas = new ReactorCanvas(pistonTexturePath, coreTexturePath, pistonRectangle, coreRectangle, reactorCore, this);
 
+        
 
         reactorCanvas->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
 
@@ -208,6 +212,7 @@ private:
 public slots:
     void addCirclitHandle();
     void addQuadritHandle();
+    void reactorUpdate();
 
 
 

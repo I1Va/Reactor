@@ -275,12 +275,8 @@ private:
         Molecule *fstMoleculePTR = (*fstMoleculeIT).get();
         Molecule *sndMoleculePTR = (*sndMoleculeIT).get();
 
-
-
-        double distance2 = (fstMoleculePTR->getPosition() - sndMoleculePTR->getPosition()).get_len2();
         double coliisionRadius = fstMoleculePTR->getCollideCircleRadius() + sndMoleculePTR->getCollideCircleRadius();
         double coliisionRadius2 = coliisionRadius * coliisionRadius;
-        if (distance2 < coliisionRadius2) return 0;
 
     
         gm_vector<double, 2> V = fstMoleculePTR->getMoveVector() - sndMoleculePTR->getMoveVector();
@@ -359,15 +355,9 @@ private:
 
         double closestWallCollisionDelta = std::numeric_limits<double>::quiet_NaN();
     
-        for (size_t i = 0; i < WALLS_CNT; i++) {
-            double collideRadius = moleculePtr->getCollideCircleRadius();
-            if (get_dot_line_distance2(walls[i], moleculePtr->getPosition()) < collideRadius * collideRadius) {
-                return currentReactorCoreTime;
-            }
-            
+        for (size_t i = 0; i < WALLS_CNT; i++) {            
             gm_line<double, 2> moveRay(moleculePtr->getPosition(), moleculePtr->getMoveVector());
             gm_vector<double, 2> intersection = get_ray_line_intersection(moveRay, walls[i]);
-
             
             
             if (intersection.is_poison()) continue;
@@ -381,7 +371,6 @@ private:
                 closestWallCollisionDelta = curDelta;
                 if (collidedWall) *collidedWall = (WallType) (i);
             }
-                
         }
         return currentReactorCoreTime + closestWallCollisionDelta;
     } 
@@ -429,28 +418,7 @@ private:
         }
     }
 
-    void reactorCoreUpdate(const double deltaSecs) {
-        updateClosestKeyEventInfo();
-        double closestEventDelta = closestEventTimePoint - currentReactorCoreTime;
-        
-        std::cout << "closestEventDelta : " << closestEventDelta << "\n";
-
-        if (std::isnan(closestEventDelta) || deltaSecs < closestEventDelta) {
-            stableProcessContinue(deltaSecs);
-            return;
-        }
-
-        if ((std::fabs(deltaSecs - closestEventDelta)) < std::numeric_limits<double>::epsilon()) {
-            reactorCoreUpdate(currentReactorCoreTime - closestEventTimePoint);
-            return;
-        }
-
-        // deltaSecs > closestEventDelta
-        stableProcessContinue(closestEventDelta); // waiting for closest event
-        // processReactorCoreEvent();
-
-        reactorCoreUpdate(deltaSecs - closestEventDelta);
-    }
+    
     
 
 
@@ -459,11 +427,11 @@ private:
 
 
 
+signals:
+    void reactorCoreUpdated();
 
-
-
-
-    
+public slots:
+    void reactorCoreUpdate(const double deltaSecs);
 
 private slots:
     void reactorCoreUpdateHandle();
