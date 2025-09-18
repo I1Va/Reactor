@@ -20,6 +20,11 @@ enum MoleculeTypes {
     QUADRIT = 1,    
 };
 
+static const double DISTANCE_COLLISION_EPS = 0.01;
+static const double DISTANCE_COLLISION_EPS2 = DISTANCE_COLLISION_EPS * DISTANCE_COLLISION_EPS;
+static const double TIME_COLLISION_EPS = 0.01;
+
+static const double SQRT_2 = 1.41421356237;
 static const double MS_IN_S = 1000;
 static const double REACTOR_CORE_UPDATE_SECS = 0.016;
 static const size_t MAX_CLASS_NAME_LEN = 10;
@@ -70,6 +75,8 @@ private:
 public:
     virtual ShapeType getShapeType() const { return ShapeType::NONE_SHAPE_TYPE; };
     virtual double getSize() const { return 0; };
+    virtual double getCollideCircleRadius() const { return 0; }
+
     gm_vector<unsigned char, 3> getColor() const { return color; }
     gm_vector<double, 2> getPosition() const { return position; }
     gm_vector<double, 2> getMoveVector() const { return moveVector; }
@@ -77,6 +84,11 @@ public:
     void setPosition(const gm_vector<double, 2> &newPosition) {
         position = newPosition;
     }
+
+    void setMoveVector(const gm_vector<double, 2> &newMoveVector) {
+        moveVector = newMoveVector;
+    }
+
 };
 
 class Circlit : public Molecule {
@@ -90,10 +102,15 @@ public:
         const int mass, 
         gm_vector<unsigned char, 3> color=CIRCLIT_COLOR
     ): 
-        Molecule(position, moveVector, mass, color) { radius = getRadius(); }
+        Molecule(position, moveVector, mass, color)
+    { 
+        moleculeType = MoleculeTypes::CIRCLIT;
+        radius = getRadius(); 
+    }
 
     ShapeType getShapeType() const override { return ShapeType::CIRCLE; }
     double getSize() const override { return radius; }
+    double getCollideCircleRadius() const override { return radius; }
 
 private:
     double getRadius() const { return mass; }; // temp formula: radius = mass
@@ -110,10 +127,15 @@ public:
         const int mass,  
         gm_vector<unsigned char, 3> color=QUADRIT_COLOR
     ): 
-        Molecule(position, moveVector, mass, color) { length = getLength(); }
+        Molecule(position, moveVector, mass, color)
+    { 
+        moleculeType = MoleculeTypes::QUADRIT;
+        length = getLength(); 
+    }
 
     ShapeType getShapeType() const override { return ShapeType::SQUARE; }
     double getSize() const override { return length; }
+    double getCollideCircleRadius() const override { return length / SQRT_2; }
 
 private:
     double getLength() const { return mass; }; // temp formula: length = mass
@@ -143,10 +165,12 @@ class ReactorCore : public QObject {
     std::list<std::unique_ptr<Molecule>> moleculesList;
 
     enum WallType {
+        NONE_WALL = -1,
+
         UPPER_WALL = 0,
         LEFT_WALL = 1,
         LOWER_WALL = 2,
-        RIGHT_WALL = 3,
+        RIGHT_WALL = 3,        
     };
 
     static const size_t WALLS_CNT = 4;
@@ -193,8 +217,8 @@ public:
         
         walls[UPPER_WALL] = gm_line<double, 2>({0, 0}, {1, 0});
         walls[LEFT_WALL]  = gm_line<double, 2>({0, 0}, {1, 0});
-        walls[LOWER_WALL] = gm_line<double, 2>({0, 0}, {1, 0});
-        walls[RIGHT_WALL] = gm_line<double, 2>({0, 0}, {1, 0});
+        walls[LOWER_WALL] = gm_line<double, 2>({0, cordSysHeight}, {1, 0});
+        walls[RIGHT_WALL] = gm_line<double, 2>({cordSysWidth,  0}, {1, 0});
     }
     
     gm_vector<int, 2> convertMoleculeCords(const gm_vector<double, 2> &moleculeCords) const {
@@ -244,44 +268,190 @@ private:
         currentReactorCoreTime += deltaSecs;
     }
 
-    double getWallCollisionTimePoint(std::list<std::unique_ptr<Molecule>>::iterator moleculeIT) {
+    double getMoleculeCollisionDelta(
+        std::list<std::unique_ptr<Molecule>>::iterator fstMoleculeIT,
+        std::list<std::unique_ptr<Molecule>>::iterator sndMoleculeIT
+    ) {
+        Molecule *fstMoleculePTR = (*fstMoleculeIT).get();
+        Molecule *sndMoleculePTR = (*sndMoleculeIT).get();
+
+
+
+        double distance2 = (fstMoleculePTR->getPosition() - sndMoleculePTR->getPosition()).get_len2();
+        double coliisionRadius = fstMoleculePTR->getCollideCircleRadius() + sndMoleculePTR->getCollideCircleRadius();
+        double coliisionRadius2 = coliisionRadius * coliisionRadius;
+        if (distance2 < coliisionRadius2) return 0;
+
+    
+        gm_vector<double, 2> V = fstMoleculePTR->getMoveVector() - sndMoleculePTR->getMoveVector();
+        gm_vector<double, 2> P = fstMoleculePTR->getPosition() - sndMoleculePTR->getPosition();
+        
+    
+        double t1 = 0, t2 = 0;
+        int nRoots = 0;
+        double aCoef = V.get_x() * V.get_x() + V.get_y() * V.get_y();
+        double bCoef = 2 * (P.get_x() * V.get_x() + P.get_y() * V.get_y());
+        double cCoef = P.get_x() * P.get_x() + P.get_y() * P.get_y() - coliisionRadius2;
+
+        solveQuadratic(aCoef, bCoef, cCoef, &t1, &t2, &nRoots);
+
+        if (nRoots != 2) return std::numeric_limits<double>::quiet_NaN();
+        if (t1 < 0) return std::numeric_limits<double>::quiet_NaN();
+
+        return t1;
+    }
+
+    double getMoleculeCollisionTimePoint(
+        std::list<std::unique_ptr<Molecule>>::iterator fstMoleculeIT,
+        std::list<std::unique_ptr<Molecule>>::iterator sndMoleculeIT
+    ) {
+        return currentReactorCoreTime + getMoleculeCollisionDelta(fstMoleculeIT, sndMoleculeIT);
+    }
+    
+    void updateClosestKeyEventInfo() {
+        for (auto fstMoleculeIT = moleculesList.begin(); fstMoleculeIT != moleculesList.end(); fstMoleculeIT++) {
+            double wallCollisionTimePoint = getWallCollisionTimePoint(fstMoleculeIT);
+
+            if ((std::isnan(closestEventTimePoint) || wallCollisionTimePoint < closestEventTimePoint))
+                closestEventTimePoint = wallCollisionTimePoint;
+
+            for (auto sndMoleculeIT = std::next(fstMoleculeIT); sndMoleculeIT != moleculesList.end(); sndMoleculeIT++) {
+                double moleculeCollisionTimePoint = getMoleculeCollisionTimePoint(fstMoleculeIT, sndMoleculeIT);
+
+                if (std::isnan(closestEventTimePoint) || moleculeCollisionTimePoint < closestEventTimePoint)
+                    closestEventTimePoint = moleculeCollisionTimePoint;
+            }
+        }
+    }
+
+    void launchMoleculeReaction(
+        std::list<std::unique_ptr<Molecule>>::iterator fstMoleculeIT,
+        std::list<std::unique_ptr<Molecule>>::iterator sndMoleculeIT 
+    ) {
+        moleculesList.erase(fstMoleculeIT);
+        moleculesList.erase(sndMoleculeIT);
+
+        std::cout << "launchMoleculeReaction!\n";
+    }
+
+    bool tryMoleculeCollision
+    (
+        std::list<std::unique_ptr<Molecule>>::iterator fstMoleculeIT,
+        std::list<std::unique_ptr<Molecule>>::iterator sndMoleculeIT 
+    ) {
+        Molecule *fstMoleculePTR = (*fstMoleculeIT).get();
+        Molecule *sndMoleculePTR = (*sndMoleculeIT).get();
+
+        double distance2 = (fstMoleculePTR->getPosition() - sndMoleculePTR->getPosition()).get_len2();
+        double collisionDistance = (fstMoleculePTR->getCollideCircleRadius() + sndMoleculePTR->getCollideCircleRadius());
+
+        if (distance2 - collisionDistance * collisionDistance < DISTANCE_COLLISION_EPS2) {
+            launchMoleculeReaction(fstMoleculeIT, sndMoleculeIT);
+            return true;
+        }
+
+        return false;
+    }
+
+
+    double getWallCollisionTimePoint(std::list<std::unique_ptr<Molecule>>::iterator moleculeIT, WallType *collidedWall=NULL) {
         Molecule *moleculePtr = (*moleculeIT).get();
 
-        double closestWallCollisionDelta2 = std::numeric_limits<double>::quiet_NaN();
+        double closestWallCollisionDelta = std::numeric_limits<double>::quiet_NaN();
     
         for (size_t i = 0; i < WALLS_CNT; i++) {
+            double collideRadius = moleculePtr->getCollideCircleRadius();
+            if (get_dot_line_distance2(walls[i], moleculePtr->getPosition()) < collideRadius * collideRadius) {
+                return currentReactorCoreTime;
+            }
+            
             gm_line<double, 2> moveRay(moleculePtr->getPosition(), moleculePtr->getMoveVector());
             gm_vector<double, 2> intersection = get_ray_line_intersection(moveRay, walls[i]);
 
+            
+            
             if (intersection.is_poison()) continue;
 
+
             gm_vector<double, 2> path = intersection - moleculePtr->getPosition();
-            double curDelta2 = path.get_len2() / moleculePtr->getMoveVector().get_len2();
-        
-            if (std::isnan(closestWallCollisionDelta2) || curDelta2 < closestWallCollisionDelta2)
-                closestWallCollisionDelta2 = curDelta2;
+
+            double curDelta = (std::sqrt(path.get_len2()) - moleculePtr->getCollideCircleRadius()) / moleculePtr->getMoveVector().get_len2();
+
+            if (std::isnan(closestWallCollisionDelta) || curDelta < closestWallCollisionDelta) {
+                closestWallCollisionDelta = curDelta;
+                if (collidedWall) *collidedWall = (WallType) (i);
+            }
+                
         }
-        
-        return currentReactorCoreTime + std::sqrt(closestWallCollisionDelta2);
+        return currentReactorCoreTime + closestWallCollisionDelta;
     } 
 
+    void processWallCollision(Molecule *molecule, const WallType wallType) {
+        assert(molecule);
 
-    // void updateClosestKeyEventInfo() {
-    //     for (auto fstMoleculeIT = moleculesList.begin(); fstMoleculeIT != moleculesList.end(); fstMoleculeIT++) {
-    //         double wallCollisionTimePoint = getWallCollisionTimePoint(fstMoleculeIT);
+        double x = molecule->getMoveVector().get_x();
+        double y = molecule->getMoveVector().get_y();
 
-    //         if ((std::isnan(closestEventTimePoint) || wallCollisionTimePoint < closestEventTimePoint))
-    //             closestEventTimePoint = wallCollisionTimePoint;
+        switch (wallType) {
+            case UPPER_WALL:
+                molecule->setMoveVector({x, -y}); break;
+            case LEFT_WALL:
+                molecule->setMoveVector({-x, y}); break;
+            case LOWER_WALL:
+                molecule->setMoveVector({x, -y}); break;
+            case RIGHT_WALL:
+                molecule->setMoveVector({-x, y}); break;
+            default:
+                assert(0 && "unknown wallType");
+        }
+    }
 
-    //         for (auto sndMoleculeIT = std::next(fstMoleculeIT); sndMoleculeIT != moleculesList.end(); sndMoleculeIT++) {
-    //             double moleculeCollisionTimePoint = currentReactorCoreTime + checkMoleculeCollision(fstMoleculeIT, sndMoleculeIT);
+    bool tryWallCollision(std::list<std::unique_ptr<Molecule>>::iterator moleculeIT) {
+        Molecule *moleculePtr = (*moleculeIT).get();
 
-    //             if (std::isnan(closestEventTimePoint) || moleculeCollisionTimePoint < closestEventTimePoint)
-    //             closestEventTimePoint = moleculeCollisionTimePoint;
-                
-    //         }
-    //     }
-    // }
+        WallType wallType = NONE_WALL;
+
+        if (std::fabs(getWallCollisionTimePoint(moleculeIT, &wallType) - currentReactorCoreTime) < TIME_COLLISION_EPS) {
+            processWallCollision(moleculePtr, wallType);
+            return true;
+        }
+
+        return false;
+    }
+
+    void processReactorCoreEvent() {
+        for (auto fstMoleculeIT = moleculesList.begin(); fstMoleculeIT != moleculesList.end(); fstMoleculeIT++) {
+            // if (tryWallCollision(fstMoleculeIT)) return;
+
+            for (auto sndMoleculeIT = std::next(fstMoleculeIT); sndMoleculeIT != moleculesList.end(); sndMoleculeIT++) {
+                // if (tryMoleculeCollision(fstMoleculeIT, sndMoleculeIT)) return;
+            }
+        }
+    }
+
+    void reactorCoreUpdate(const double deltaSecs) {
+        updateClosestKeyEventInfo();
+        double closestEventDelta = closestEventTimePoint - currentReactorCoreTime;
+        
+        std::cout << "closestEventDelta : " << closestEventDelta << "\n";
+
+        if (std::isnan(closestEventDelta) || deltaSecs < closestEventDelta) {
+            stableProcessContinue(deltaSecs);
+            return;
+        }
+
+        if ((std::fabs(deltaSecs - closestEventDelta)) < std::numeric_limits<double>::epsilon()) {
+            reactorCoreUpdate(currentReactorCoreTime - closestEventTimePoint);
+            return;
+        }
+
+        // deltaSecs > closestEventDelta
+        stableProcessContinue(closestEventDelta); // waiting for closest event
+        // processReactorCoreEvent();
+
+        reactorCoreUpdate(deltaSecs - closestEventDelta);
+    }
+    
 
 
     

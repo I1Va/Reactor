@@ -30,20 +30,5 @@
 // }
 
 void ReactorCore::reactorCoreUpdateHandle() {
-    // if (deltaSecs < closestKeyEvent.getTime()) {
-    //     stableProcessContinue(REACTOR_CORE_UPDATE_SECS);
-    //     return;
-    // }
-
-    // if ((deltaSecs - closestKeyEvent.getTime()) < std::numeric_limits<double>::epsilon()) {
-    //     processClosestKeyEvent();
-    //     return;
-    // }
-
-    // // REACTOR_CORE_UPDATE_SECS > closestKeyEvent.getTime()
-    // if (deltaSecs > closestKeyEvent.getTime()) {
-    //     double passedMs = processClosestKeyEvent();
-    //     reactorCoreUpdate(deltaSecs - passedMs);
-    //     return;
-    // }
+    reactorCoreUpdate(REACTOR_CORE_UPDATE_SECS);
 }

@@ -77,7 +77,8 @@ protected:
             double moleculeSize = moleculePtr->getSize() * CORE_CORD_SYSTEM_SCALE;
             QColor moleculeColor = QColor(moleculePtr->getColor().get_x(), moleculePtr->getColor().get_y(), moleculePtr->getColor().get_z());
             gm_vector<int, 2> moleculeCanvasPos = reactorCore->convertMoleculeCords(moleculePtr->getPosition());
-            
+
+
             painter.setBrush(moleculeColor);
             painter.setPen(Qt::NoPen); 
             
@@ -184,8 +185,6 @@ public:
         addReactorCoreButtons(reactorLayout, reactorCore, MOLECULE_BUTTONS_STRETCH_FACTOR);
         
         reactorLayout->update();
-        std::cout << "height: " << reactorCanvas->size().height() << "\n";
-        
         setPistonPercentage(PISTON_SLIDER_MINVAL);
     }
 
