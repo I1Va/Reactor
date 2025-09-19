@@ -47,6 +47,45 @@ enum ShapeType {
 };
 
 
+class Molecule;
+
+typedef void (*moleculeReaction) (
+    std::list<std::unique_ptr<Molecule>> &moleculeList,
+    std::list<std::unique_ptr<Molecule>>::iterator fstMoleculeIT,
+    std::list<std::unique_ptr<Molecule>>::iterator sndMoleculeIT
+);
+
+void CirclitQuadritReaction(
+    std::list<std::unique_ptr<Molecule>> &moleculeList,
+    std::list<std::unique_ptr<Molecule>>::iterator fstMoleculeIT,
+    std::list<std::unique_ptr<Molecule>>::iterator sndMoleculeIT
+);
+
+const moleculeReaction CirclitCirclitReaction = CirclitQuadritReaction;
+
+void QuadritQuadritReaction(
+    std::list<std::unique_ptr<Molecule>> &moleculeList,
+    std::list<std::unique_ptr<Molecule>>::iterator fstMoleculeIT,
+    std::list<std::unique_ptr<Molecule>>::iterator sndMoleculeIT
+);
+
+void launchMoleculeReaction (
+    std::list<std::unique_ptr<Molecule>> &moleculeList,
+    std::list<std::unique_ptr<Molecule>>::iterator fstMoleculeIT,
+    std::list<std::unique_ptr<Molecule>>::iterator sndMoleculeIT 
+);
+
+
+const size_t moleculeReactionsVTableMaxSz = 100;
+const moleculeReaction moleculeReactionsVTable[moleculeReactionsVTableMaxSz][moleculeReactionsVTableMaxSz] = 
+{
+    {/*[0:CIRCLIT][0:CIRCLIT]=*/CirclitCirclitReaction, /*[0:CIRCLIT][1:QUADRIT]=*/ CirclitQuadritReaction},
+    {/*[1:QUADRIT][0:CIRCLIT]=*/CirclitQuadritReaction, /*[1:QUADRIT][1:QUADRIT]=*/ QuadritQuadritReaction}
+};
+
+
+
+
 class Molecule {
     enum MoleculeTypes moleculeType;
 
@@ -59,6 +98,11 @@ class Molecule {
 
     friend class Circlit;
     friend class Quadrit;
+    friend void launchMoleculeReaction(
+        std::list<std::unique_ptr<Molecule>> &moleculeList,
+        std::list<std::unique_ptr<Molecule>>::iterator fstMoleculeIT,
+        std::list<std::unique_ptr<Molecule>>::iterator sndMoleculeIT);
+
 private:
     Molecule
     (
@@ -84,10 +128,13 @@ public:
     gm_vector<unsigned char, 3> getColor() const { return color; }
     gm_vector<double, 2> getPosition() const { return position; }
     gm_vector<double, 2> getMoveVector() const { return moveVector; }
+    int getMass() const { return mass; }
 
     void setPosition(const gm_vector<double, 2> &newPosition) {
         position = newPosition;
     }
+
+    MoleculeTypes getMoleculeType() const { return moleculeType; }
 
     void setMoveVector(const gm_vector<double, 2> &newMoveVector) {
         moveVector = newMoveVector;
@@ -334,16 +381,7 @@ private:
         }
     }
 
-    void launchMoleculeReaction(
-        std::list<std::unique_ptr<Molecule>>::iterator fstMoleculeIT,
-        std::list<std::unique_ptr<Molecule>>::iterator sndMoleculeIT 
-    ) {
-        
-        std::cout << "launchMoleculeReaction!\n";
-        moleculesList.erase(fstMoleculeIT);
-        moleculesList.erase(sndMoleculeIT);
 
-    }
 
     bool tryMoleculeCollision
     (
@@ -357,7 +395,7 @@ private:
         double collisionDistance = (fstMoleculePTR->getCollideCircleRadius() + sndMoleculePTR->getCollideCircleRadius());
 
         if (distance2 - collisionDistance * collisionDistance < DISTANCE_COLLISION_EPS2) {
-            launchMoleculeReaction(fstMoleculeIT, sndMoleculeIT);
+            launchMoleculeReaction(moleculesList, fstMoleculeIT, sndMoleculeIT);
             return true;
         }
 
