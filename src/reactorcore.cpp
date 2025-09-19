@@ -17,12 +17,18 @@ void QuadritQuadritReaction(
     int boomMoleculeCnt = fstMoleculePTR->getMass() + fstMoleculePTR->getMass();
     
     
-    double newRadius = CIRCLIT_MIN_RADIUS * std::sin(std::numbers::pi / boomMoleculeCnt);
-    double boomRootationAngle = 2 * std::numbers::pi / boomMoleculeCnt;
-    gm_vector<double, 2> boomCurspeedVector = gm_vector<double, 2>(0, -1);
 
+    double boomRootationAngle = 2 * std::numbers::pi / boomMoleculeCnt;
+    
+    double boomRadius = std::sqrt(2 / std::sin(boomRootationAngle)) * Circlit({0, 0}, {0, 0}, 1).getSize() * 2;
+    gm_vector<double, 2> boomCurSpeedVector = gm_vector<double, 2>(0, -1) * boomRadius;
+
+    fstMoleculePTR->sePhysicalState(DEATH);
+    sndMoleculePTR->sePhysicalState(DEATH);
     for (int i = 0; i < boomMoleculeCnt; i++) {
-        moleculeList.push_back(std::make_unique<Circlit>(collideCenter + boomCurspeedVector, boomCurspeedVector, 1));
+        moleculeList.push_back(std::make_unique<Circlit>(collideCenter + boomCurSpeedVector, boomCurSpeedVector, 1));
+        boomCurSpeedVector = boomCurSpeedVector.rotate(boomRootationAngle);
+        (*(std::prev(moleculeList.end()))).get()->sePhysicalState(UNRESPONSIVE);        
     }
 }
 
