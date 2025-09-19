@@ -402,7 +402,35 @@ private:
 
         updateMoleculePosition(moleculeIT, deltaSecs);
     }
+
+    double getMoleculeCollisionDelta(
+        std::list<std::unique_ptr<Molecule>>::iterator fstMoleculeIT,
+        std::list<std::unique_ptr<Molecule>>::iterator sndMoleculeIT
+    ) {
+        Molecule *fstMoleculePTR = (*fstMoleculeIT).get();
+        Molecule *sndMoleculePTR = (*sndMoleculeIT).get();
+
+        double coliisionRadius = fstMoleculePTR->getCollideCircleRadius() + sndMoleculePTR->getCollideCircleRadius();
+        double coliisionRadius2 = coliisionRadius * coliisionRadius;
+
     
+        gm_vector<double, 2> V = fstMoleculePTR->getSpeedVector() - sndMoleculePTR->getSpeedVector();
+        gm_vector<double, 2> P = fstMoleculePTR->getPosition() - sndMoleculePTR->getPosition();
+        
+    
+        double t1 = 0, t2 = 0;
+        int nRoots = 0;
+        double aCoef = V.get_x() * V.get_x() + V.get_y() * V.get_y();
+        double bCoef = 2 * (P.get_x() * V.get_x() + P.get_y() * V.get_y());
+        double cCoef = P.get_x() * P.get_x() + P.get_y() * P.get_y() - coliisionRadius2;
+
+        solveQuadratic(aCoef, bCoef, cCoef, &t1, &t2, &nRoots);
+
+        if (nRoots != 2) return std::numeric_limits<double>::quiet_NaN();
+        if (t1 < 0) return std::numeric_limits<double>::quiet_NaN();
+
+        return t1;
+    }
 
     void processMoleculeCollision
     (
@@ -428,8 +456,6 @@ signals:
 
 public slots:
     void reactorCoreUpdate(const double deltaSecs) {
-        
-
         for (auto fstMoleculeIT = moleculesList.begin(); fstMoleculeIT != moleculesList.end() && 
                                                          (*fstMoleculeIT).get()->getPhysicalState() != UNRESPONSIVE; fstMoleculeIT++) {
             ProcessMoleculeMovement(fstMoleculeIT, deltaSecs);
@@ -455,73 +481,13 @@ public slots:
         }
 
         emit reactorCoreUpdated();
-        
-        
-
-        
-
-        // updateClosestKeyEventInfo();
-
-        // double closestEventDelta = closestEventTimePoint - currentReactorCoreTime;
-            
-        // if (std::isnan(closestEventDelta) || deltaSecs < closestEventDelta) {
-        //     stableProcessContinue(deltaSecs);
-        //     return;
-        // }
-
-        // // deltaSecs > closestEventDelta
-        // if (closestEventDelta > std::numeric_limits<double>::epsilon()) stableProcessContinue(closestEventDelta); // waiting for closest event
-        // processReactorCoreEvent();
-        // stableProcessContinue(deltaSecs - closestEventDelta);
     }
-
 
 private slots:
     void reactorCoreUpdateHandle() {
         reactorCoreUpdate(REACTOR_CORE_UPDATE_SECS);
     }
 };
-
-
-
-
-
-// void reactionCriclitCirclit(std::unique_ptr<Molecule> moleculeAPtr, std::unique_ptr<Molecule> moleculeBPtr) {
-    //     // weak ptr 
-    //     std::unique_ptr<Circlit> CirclitAPtr = std::unique_ptr<Circlit>(static_cast<Circlit*>(moleculeAPtr.release()));
-    //     std::unique_ptr<Circlit> CirclitBPtr = std::unique_ptr<Circlit>(static_cast<Circlit*>(moleculeBPtr.release()));
-
-
-    //     int newMass = CirclitAPtr.get + other.mass;
-    //     gm_vector<double, 2> newspeedVector = (speedVector * mass + other.speedVector * other.mass) * (1.0 / newMass);
-        
-    //     reactionResult.push_back(std::make_unique<Quadrit>(collideCenter, newspeedVector, newMass));        
-    // }
-
-    // void processMoleculeReaction(std::unique_ptr<Molecule> moleculeAPtr, std::unique_ptr<Molecule> moleculeBPtr) {
-    //     //
-    //     if (typeid(*moleculeAPtr) == typeid(Circlit) && typeid(*moleculeBPtr) == typeid(Circlit)) {
-
-    //     }
-    // }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 #endif // REACTORCORE_H

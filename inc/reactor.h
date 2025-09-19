@@ -178,16 +178,12 @@ public:
         connect(reactorCore, &ReactorCore::reactorCoreUpdated, this, &Reactor::reactorUpdate);
 
         reactorCanvas = new ReactorCanvas(pistonTexturePath, coreTexturePath, pistonRectangle, coreRectangle, reactorCore, this);
-
-        
-
         reactorCanvas->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
 
         reactorLayout->addWidget(reactorCanvas, REACTOR_CANVAS_STRETCH_FACTOR);
         addPistonSlider(reactorLayout, PISTON_SLIDER_STRETCH_FACTOR);
         addReactorCoreButtons(reactorLayout, reactorCore, MOLECULE_BUTTONS_STRETCH_FACTOR);
-        
-        reactorLayout->update();
+
         setPistonPercentage(PISTON_SLIDER_MINVAL);
     }
 
