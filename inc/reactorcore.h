@@ -20,7 +20,7 @@ enum MoleculeTypes {
     QUADRIT = 1,    
 };
 
-static const double DISTANCE_COLLISION_EPS = 0.01;
+static const double DISTANCE_COLLISION_EPS = 0.1;
 static const double DISTANCE_COLLISION_EPS2 = DISTANCE_COLLISION_EPS * DISTANCE_COLLISION_EPS;
 static const double TIME_COLLISION_EPS = 0.01;
 
@@ -216,9 +216,9 @@ public:
         cordSysHeight = coreCanvasSize.get_y() / coreCordSystemScale;
         
         walls[UPPER_WALL] = gm_line<double, 2>({0, 0}, {1, 0});
-        walls[LEFT_WALL]  = gm_line<double, 2>({0, 0}, {1, 0});
+        walls[LEFT_WALL]  = gm_line<double, 2>({0, 0}, {0, 1});
         walls[LOWER_WALL] = gm_line<double, 2>({0, cordSysHeight}, {1, 0});
-        walls[RIGHT_WALL] = gm_line<double, 2>({cordSysWidth,  0}, {1, 0});
+        walls[RIGHT_WALL] = gm_line<double, 2>({cordSysWidth,  0}, {0, 1});
     }
     
     gm_vector<int, 2> convertMoleculeCords(const gm_vector<double, 2> &moleculeCords) const {
@@ -265,7 +265,9 @@ private:
         for (auto moleculeIT = moleculesList.begin(); moleculeIT != moleculesList.end(); moleculeIT++) {
             updateMoleculePosition(moleculeIT, deltaSecs);
         }
+
         currentReactorCoreTime += deltaSecs;
+        closestEventTimePoint = std::numeric_limits<double>::quiet_NaN();
     }
 
     double getMoleculeCollisionDelta(
@@ -324,10 +326,11 @@ private:
         std::list<std::unique_ptr<Molecule>>::iterator fstMoleculeIT,
         std::list<std::unique_ptr<Molecule>>::iterator sndMoleculeIT 
     ) {
+        
+        std::cout << "launchMoleculeReaction!\n";
         moleculesList.erase(fstMoleculeIT);
         moleculesList.erase(sndMoleculeIT);
 
-        std::cout << "launchMoleculeReaction!\n";
     }
 
     bool tryMoleculeCollision
@@ -354,24 +357,50 @@ private:
         Molecule *moleculePtr = (*moleculeIT).get();
 
         double closestWallCollisionDelta = std::numeric_limits<double>::quiet_NaN();
-    
+        
+       WallType  wallt = NONE_WALL;
+
+        
         for (size_t i = 0; i < WALLS_CNT; i++) {            
             gm_line<double, 2> moveRay(moleculePtr->getPosition(), moleculePtr->getMoveVector());
+            
+
             gm_vector<double, 2> intersection = get_ray_line_intersection(moveRay, walls[i]);
             
             
-            if (intersection.is_poison()) continue;
+            if (intersection.is_poison()) {
+                continue;
+            }
+            
+            
 
 
             gm_vector<double, 2> path = intersection - moleculePtr->getPosition();
 
-            double curDelta = (std::sqrt(path.get_len2()) - moleculePtr->getCollideCircleRadius()) / moleculePtr->getMoveVector().get_len2();
+            double curDelta = (std::sqrt(path.get_len2()) - moleculePtr->getCollideCircleRadius()) / std::sqrt(moleculePtr->getMoveVector().get_len2());
+
+            // enum WallType {
+            //     NONE_WALL = -1,
+
+            //     UPPER_WALL = 0,
+            //     LEFT_WALL = 1,
+            //     LOWER_WALL = 2,
+            //     RIGHT_WALL = 3,        
+            // };
+
 
             if (std::isnan(closestWallCollisionDelta) || curDelta < closestWallCollisionDelta) {
                 closestWallCollisionDelta = curDelta;
+                
+                  
+
+
+
                 if (collidedWall) *collidedWall = (WallType) (i);
+                wallt = (WallType) i;
             }
         }
+        
         return currentReactorCoreTime + closestWallCollisionDelta;
     } 
 
@@ -400,8 +429,9 @@ private:
 
         WallType wallType = NONE_WALL;
 
-        if (std::fabs(getWallCollisionTimePoint(moleculeIT, &wallType) - currentReactorCoreTime) < TIME_COLLISION_EPS) {
+        if (std::fabs(getWallCollisionTimePoint(moleculeIT, &wallType) < currentReactorCoreTime)) {
             processWallCollision(moleculePtr, wallType);
+            stableProcessContinue(TIME_COLLISION_EPS);
             return true;
         }
 
@@ -410,10 +440,10 @@ private:
 
     void processReactorCoreEvent() {
         for (auto fstMoleculeIT = moleculesList.begin(); fstMoleculeIT != moleculesList.end(); fstMoleculeIT++) {
-            // if (tryWallCollision(fstMoleculeIT)) return;
+            if (tryWallCollision(fstMoleculeIT)) return;
 
             for (auto sndMoleculeIT = std::next(fstMoleculeIT); sndMoleculeIT != moleculesList.end(); sndMoleculeIT++) {
-                // if (tryMoleculeCollision(fstMoleculeIT, sndMoleculeIT)) return;
+                if (tryMoleculeCollision(fstMoleculeIT, sndMoleculeIT)) return;
             }
         }
     }
@@ -431,15 +461,32 @@ signals:
     void reactorCoreUpdated();
 
 public slots:
-    void reactorCoreUpdate(const double deltaSecs);
+    void reactorCoreUpdate(const double deltaSecs) {
+        emit reactorCoreUpdated();
+
+        updateClosestKeyEventInfo();
+
+        double closestEventDelta = closestEventTimePoint - currentReactorCoreTime;
+            
+        if (std::isnan(closestEventDelta) || deltaSecs < closestEventDelta) {
+            stableProcessContinue(deltaSecs);
+            return;
+        }
+
+        // deltaSecs > closestEventDelta
+        if (closestEventDelta > std::numeric_limits<double>::epsilon()) stableProcessContinue(closestEventDelta); // waiting for closest event
+        processReactorCoreEvent();
+        stableProcessContinue(deltaSecs - closestEventDelta);
+        
+    
+    }
+
 
 private slots:
-    void reactorCoreUpdateHandle();
+    void reactorCoreUpdateHandle() {
+        reactorCoreUpdate(REACTOR_CORE_UPDATE_SECS);
+    }
 };
-
-
-
-
 
 
 

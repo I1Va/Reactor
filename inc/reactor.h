@@ -82,7 +82,6 @@ protected:
             painter.setBrush(moleculeColor);
             painter.setPen(Qt::NoPen); 
             
-            std::cout << "pos : " << moleculeCanvasPos << "\n";
             switch (shapeType) {
                 case ShapeType::SQUARE:
 
