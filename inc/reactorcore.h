@@ -71,8 +71,12 @@ private:
         moveVector(moveVector),
         mass(mass),
         color(color) {};
+    
+    
 
 public:
+    virtual ~Molecule() {};
+
     virtual ShapeType getShapeType() const { return ShapeType::NONE_SHAPE_TYPE; };
     virtual double getSize() const { return 0; };
     virtual double getCollideCircleRadius() const { return 0; }
@@ -88,6 +92,8 @@ public:
     void setMoveVector(const gm_vector<double, 2> &newMoveVector) {
         moveVector = newMoveVector;
     }
+
+    
 
 };
 
@@ -107,6 +113,9 @@ public:
         moleculeType = MoleculeTypes::CIRCLIT;
         radius = getRadius(); 
     }
+
+    ~Circlit() override {}
+
 
     ShapeType getShapeType() const override { return ShapeType::CIRCLE; }
     double getSize() const override { return radius; }
@@ -132,6 +141,9 @@ public:
         moleculeType = MoleculeTypes::QUADRIT;
         length = getLength(); 
     }
+
+    ~Quadrit() override {}
+
 
     ShapeType getShapeType() const override { return ShapeType::SQUARE; }
     double getSize() const override { return length; }
