@@ -19,12 +19,10 @@ void QuadritQuadritReaction(
     
     double newRadius = CIRCLIT_MIN_RADIUS * std::sin(std::numbers::pi / boomMoleculeCnt);
     double boomRootationAngle = 2 * std::numbers::pi / boomMoleculeCnt;
-    gm_vector<double, 2> boomCurMoveVector = gm_vector<double, 2>(0, -1);
+    gm_vector<double, 2> boomCurspeedVector = gm_vector<double, 2>(0, -1);
 
-    moleculeList.erase(fstMoleculeIT);
-    moleculeList.erase(sndMoleculeIT);
     for (int i = 0; i < boomMoleculeCnt; i++) {
-        moleculeList.push_back(std::make_unique<Circlit>(collideCenter + boomCurMoveVector, boomCurMoveVector, 1));
+        moleculeList.push_back(std::make_unique<Circlit>(collideCenter + boomCurspeedVector, boomCurspeedVector, 1));
     }
 }
 
@@ -38,14 +36,18 @@ void CirclitQuadritReaction(
 
     gm_vector<double, 2> collideCenter = fstMoleculePTR->getPosition() + (fstMoleculePTR->getPosition() - fstMoleculePTR->getPosition()) * 0.5;
 
-    int newMass = fstMoleculePTR->getMass() + fstMoleculePTR->getMass();
+    int newMass = fstMoleculePTR->getMass() + sndMoleculePTR->getMass();
+   
     
-    gm_vector<double, 2> newMoveVector = (fstMoleculePTR->getMoveVector() * fstMoleculePTR->getMass() + 
-                                          sndMoleculePTR->getMoveVector() * sndMoleculePTR->getMass()) * (1.0 / newMass);
+    gm_vector<double, 2> newspeedVector = (fstMoleculePTR->getSpeedVector() * fstMoleculePTR->getMass() + 
+                                          sndMoleculePTR->getSpeedVector() * sndMoleculePTR->getMass()) * (1.0 / newMass);
+
     
-    moleculeList.erase(fstMoleculeIT);
-    moleculeList.erase(sndMoleculeIT);
-    moleculeList.push_back(std::make_unique<Quadrit>(collideCenter, newMoveVector, newMass));        
+    fstMoleculePTR->sePhysicalState(DEATH);
+    sndMoleculePTR->sePhysicalState(DEATH);
+
+    moleculeList.push_back(std::make_unique<Quadrit>(collideCenter, newspeedVector, newMass));
+    (*(std::prev(moleculeList.end()))).get()->sePhysicalState(UNRESPONSIVE);        
 }
 
 
@@ -64,6 +66,7 @@ void launchMoleculeReaction (
     if (reactionFunc == NULL) {
         std::cout << "Unknown Reaction : " << fstMoleculeType << " + " << sndMoleculeType << "\n";
         assert(0);
+        return;
     }
 
     reactionFunc(moleculeList, fstMoleculeIT, sndMoleculeIT);
